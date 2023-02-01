@@ -364,9 +364,9 @@ function print_logs() {
     echo "================================================================================"
     echo "============================== Bitrise Logs Start =============================="
     echo "$logs" \
-    | perl -0p -e 's/([.*\S\s]+)(^[\+-]+\n\|\s+bitrise summary[.*\S\s]+)/$1/gm' \
-    | perl -0p -e 's/([\+-]+\n^\|\s(\(\d+\)\s)(\D*?)(?=\s{2,})\s*\|)/section_start\:0\:$3\r\033\[0K \t \033[0;36m $3\n$1/gm' \
-    | perl -0p -e 's/(\|.*\[32;1m(.*?)(?=\s{2,}).*\n[\+-]+)/$1\nsection_end\:0\:$2\r\033\[0K/gm' \
+    | perl -0p -e 's/([\+-]+\n^\|\s\((\d+)\)\s([\D\S]*?)(?=\s{2,})\s*\|)/$1/gm' \
+    | perl -0p -e 's/([\+-]+\n^\|\s(\(\d+\)\s)(\D*?)(?=\s{2,})\s*\|)/section_start\:0\:$3\r\033\[0K\tz\033[0;36m $3\n$1/gm' \
+    | perl -0p -e 's/(\|.*\[\d+;\d+m(.*?)(?=\s{2,}).*\n[\+-]+)/$1\nsection_end\:0\:$2\r\033\[0K/gm' \
     | perl -0p -e 's/(?<=section_start|\G)(\S+)( )/$1_/gm' \
     | perl -0p -e 's/(?<=section_start:\d:|\G)([a-zA-Z0-9_ :]+)([[:punct:]]+)/$1_/gm' \
     | perl -0p -e 's/(?<=section_end|\G)(\S+)( )/$1_/gm' \
