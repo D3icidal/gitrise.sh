@@ -206,7 +206,7 @@ function trigger_build() {
         build_url=$(echo "$response" | jq ".build_url" | sed 's/"//g')
         build_slug=$(echo "$response" | jq ".build_slug" | sed 's/"//g')
     fi
-    printf "\nHold on... We're about to liftoff! 🚀\n \nBuild URL: %s\n" "${build_url}"
+    printf "\nHold on... We're about to liftoff! 🚀\n \n Bitrise Build URL: %s\n" "${build_url}"
 }
 
 function process_build() {
@@ -319,7 +319,8 @@ download_artifacts() {
     OUTPUT_DIR=${DOWNLOAD_DIR:-'./'}
     # Ensure directory OUTPUT_DIR exist
     mkdir -p "$OUTPUT_DIR"
-    echo "downloading artifacts to $OUTPUT_DIR"
+    echo -e "section_start:`date +%s`:Download_Artifacts[collapsed=true]\r\e[0KDownload Artifacts"
+    echo "Downloading artifacts to $OUTPUT_DIR"
     # Get artifacts slug
     local command="curl --silent -X GET https://api.bitrise.io/v0.1/apps/$PROJECT_SLUG/builds/$build_slug/artifacts \
                   --header 'Accept: application/json' --header 'Authorization: $ACCESS_TOKEN'"
@@ -329,27 +330,51 @@ download_artifacts() {
       echo "Download artifact meta data $artifact_slug"
 
       command="curl --silent -X GET https://api.bitrise.io/v0.1/apps/$PROJECT_SLUG/builds/$build_slug/artifacts/$artifact_slug \
-                    --header 'Accept: application/json' --header 'Authorization: $ACCESS_TOKEN'"
+                    --header 'Accept: application/json' --header 'Authorization: $ACCESS_TOKEN' 2>/dev/null" 
 
       response=$(eval "$command")
       artifact_url=$(echo "$response" | jq --raw-output '.data.expiring_download_url')
       artifact_name=$(echo "$response" | jq --raw-output '.data.title')
-      echo "Downloading $artifact_name from $artifact_url"
+      echo "Downloading $artifact_name"
       curl "$artifact_url" --output "$OUTPUT_DIR/$artifact_name"
     done
+    echo -e "section_end:`date +%s`:Download_Artifacts\r\e[0K"
   fi
+
+  printf "\n \n🚀  Bitrise Build URL: %s\n" "${build_url}"
 }
 
 function print_logs() {
     local url="$1"
     local logs=$(curl --silent -X GET "$url")
-
+    # TODO 
+    # - Currently only works with fetched (non-streamed) logs. Streaming is a whole other section
+    # Doesn't display job time. To do that, you would need to find the elapsed time at the end of a job, convert to sections, and place in the section_start/end integer
+    # #    REGEX Description:
+    # 1) Splits log by "bitrise summary" and only returns the first half (the summary section confuses my regex)
+    # 2) Finds the start of a section (the +----------+ stuff), and adds a line "section_start:0:job title" before that. Also adds the needed escape codes
+    # 3) Finds the end of a section the part with the ansi '\[32;1m' stuff, and adds a line for "section_end:0:job title"
+    # 4) Finds 'section_start' and replaces the spaces with underscores _
+    # 5) Finds 'section_start and replaces special charecters with underscores'
+    # 4) Finds 'section_end' and replaces the spaces with underscores _
+    # 5) Finds 'section_end and replaces special charecters with underscores'
+    # 6) Finds 'section_start' and, right before the carriage return \r, adds [collapsed=true] to autocollapse the section
+    # 7) Splits log by "bitrise summary" and only returns the second half (the summary section confuses my regex) - which doesn't get folded
+    # 
     echo "================================================================================"
     echo "============================== Bitrise Logs Start =============================="
-    echo "$logs"
+    echo "$logs" \
+    | perl -0p -e 's/([.*\S\s]+)(^[\+-]+\n\|\s+bitrise summary[.*\S\s]+)/$1/gm' \
+    | perl -0p -e 's/([\+-]+\n^\|\s(\(\d+\)\s)(\D*?)(?=\s{2,})\s*\|)/section_start\:0\:$3\r\033\[0K \t \033[0;36m $3\n$1/gm' \
+    | perl -0p -e 's/(\|.*\[32;1m(.*?)(?=\s{2,}).*\n[\+-]+)/$1\nsection_end\:0\:$2\r\033\[0K/gm' \
+    | perl -0p -e 's/(?<=section_start|\G)(\S+)( )/$1_/gm' \
+    | perl -0p -e 's/(?<=section_start:\d:|\G)([a-zA-Z0-9_ :]+)([[:punct:]]+)/$1_/gm' \
+    | perl -0p -e 's/(?<=section_end|\G)(\S+)( )/$1_/gm' \
+    | perl -0p -e 's/(?<=section_end:\d:|\G)([a-zA-Z0-9_ :]+)([[:punct:]]+)/$1_/gm' \
+    | perl -0p -e 's/(?<=section_start:\d:|\G)(.+)\r/$1\[collapsed=true\]\r/gm'
+    echo "$logs" | perl -0p -e 's/([.*\S\s]+)(^[\+-]+\n\|\s+bitrise summary[.*\S\s]+)/$2/gm'
     echo "================================================================================"
     echo "==============================  Bitrise Logs End  =============================="
-
 }
 
 function build_status_message() {
@@ -360,9 +385,11 @@ function build_status_message() {
             ;;
         "1")
             echo "Build Successful 🎉"
+            printf "\n \n🚀  Bitrise Build URL: %s\n" "${build_url}"
             ;;
         "2")
             echo "Build Failed 🚨"
+            printf "\n \n🚀  Bitrise Build URL: %s\n" "${build_url}"
             ;;
         "3")
             echo "Build Aborted 💥"
