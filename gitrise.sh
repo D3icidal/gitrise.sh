@@ -371,7 +371,7 @@ function print_logs() {
     echo "============================== Bitrise Logs Start =============================="
     echo "$logs" \
     | perl -0p -e 's/([.*\S\s]+)(^[\+-]+\n\|\s+bitrise summary[.*\S\s]+)/$1/gm' \
-    | perl -0p -e '$epoc = time(); s/([\+-]+\n^\|\s\((\d+)\)\s([\D\S]*?)(?=\s{2,})\s*\|.+? \| [[:cntrl:]](\[\d+;\dm)(.+?) (\(Failed\)|\(Skipped\))* (.*?))(\n +▼)/section_start:$epoc:$3\r\033\[0K\033$4Step ($2) $6- $3\033[0m\n$1section_end:123456:$3\n$8/gms' \
+    | perl -0p -e '$epoc = time(); s/([\+-]+\n^\|\s\((\d+)\)\s([\D\S]*?)(?=\s{2,})\s*\|.+? \| [[:cntrl:]](\[\d+;\dm)(.+?) (\(Failed\)|\(Skipped\))* (.*?))(\n +▼)/section_start:$epoc:$3\r\033\[0K\033$4Step ($2) $6- $3\033[0m\n$1section_end:$epoc:$3\n$8/gms' \
     | perl -0p -e 's/(?<=section_start|\G)(\S+)( )/$1_/gm' \
     | perl -0p -e 's/(?<=section_end|\G)(\S+)( )/$1_/gm' \
     | perl -0p -e 's/(?<=section_start:\d{10}|\d:|\G)([a-zA-Z0-9_ :]+)([[:punct:]]+)/$1/gm' \
