@@ -330,12 +330,12 @@ download_artifacts() {
       echo "Download artifact meta data $artifact_slug"
 
       command="curl --silent -X GET https://api.bitrise.io/v0.1/apps/$PROJECT_SLUG/builds/$build_slug/artifacts/$artifact_slug \
-                    --header 'Accept: application/json' --header 'Authorization: $ACCESS_TOKEN' 2>/dev/null" 
+                    --header 'Accept: application/json' --header 'Authorization: $ACCESS_TOKEN'" 
 
       response=$(eval "$command")
       artifact_url=$(echo "$response" | jq --raw-output '.data.expiring_download_url')
       artifact_name=$(echo "$response" | jq --raw-output '.data.title')
-      echo "Downloading $artifact_name"
+      echo "Downloading $artifact_name from $artifact_url"
       curl "$artifact_url" --output "$OUTPUT_DIR/$artifact_name"
     done
     echo -e "section_end:`date +%s`:Download_Artifacts\r\e[0K"

@@ -1,0 +1,217 @@
+
+Hold on... We're about to liftoff! 🚀
+ 
+Build URL: https://app.bitrise.io/build/ff7a6bdb-a7fb-4d71-991b-4d74e424f76b
+Build on-hold
+Build in-progress
+Build success
+================================================================================
+============================== Bitrise Logs Start ==============================
+Agent version:	1.62.2
+Hostname:	vm-osx-ventura-g2.8core-ca39a5f1-7e81-4982-9553-3b3004b9b62f
+Nodename:	LAS1-vFW01-gen2-mmg4-10-92-100-76
+Start time:	2023-01-27T22:18:35Z
+Xcode version:	14.1
+$ bitrise "run" "--config" "/var/folders/11/nh0v1jld7zd7b9zqm1774gtm0000gn/T/bitrise-agent723020077/bitrise.yml" "--inventory" "/var/folders/11/nh0v1jld7zd7b9zqm1774gtm0000gn/T/bitrise-agent723020077/bitrise.secrets.yml" "--json-params-base64" "eyJ3b3JrZmxvdyI6ImRldi1EdW1teSJ9"
+
+██████╗ ██╗████████╗██████╗ ██╗███████╗███████╗
+██╔══██╗██║╚══██╔══╝██╔══██╗██║██╔════╝██╔════╝
+██████╔╝██║   ██║   ██████╔╝██║███████╗█████╗
+██╔══██╗██║   ██║   ██╔══██╗██║╚════██║██╔══╝
+██████╔╝██║   ██║   ██║  ██║██║███████║███████╗
+╚═════╝ ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝╚══════╝╚══════╝
+version: 2.0.0
+
+[33;1mCI mode: true
+[0m[33;1mPR mode: false
+[0m[33;1mDebug mode: false
+[0m[33;1mSecret filtering mode: true
+[0m[33;1mSecret Envs filtering mode: true
+[0m[33;1mNo output timeout mode: false
+[0m
+[34;1mRunning workflow: dev-Dummy
+[0m
+[34;1mSwitching to workflow: dev-Dummy
+[0mStep uses latest version, updating StepLib...
+section_start:1:(0) Activate SSH key (RSA private key)
+[0KHeader: (0) Activate SSH key (RSA private key)
++------------------------------------------------------------------------------+
+| (0) Activate SSH key (RSA private key)                                       |
++------------------------------------------------------------------------------+
+| id: activate-ssh-key                                                         |
+| version: 4.1.0                                                               |
+| collection: https://github.com/bitrise-io/bitrise-steplib.git                |
+| toolkit: go                                                                  |
+| time: 2023-01-27T22:18:37Z                                                   |
++------------------------------------------------------------------------------+
+|                                                                              |
+[34;1mInput:
+[0m- SSHRsaPrivateKey: *****
+- SSHKeySavePath: /Users/vagrant/.ssh/bitrise_step_activate_ssh_key
+- IsRemoveOtherIdentities: true
+- Verbose: false
+$ ssh-add "-l"
+ssh_agent_check_result: 1
+running / accessible ssh-agent detected
+
+$ ssh-add "-D"
+All identities removed.
+
+$ ssh-agent "-k"
+SSH_AGENT_PID not set, cannot kill agent
+Exit code: exit status 1
+
+$ bash "-c" "/var/folders/11/nh0v1jld7zd7b9zqm1774gtm0000gn/T/spawn2754171/tmp_spawn.sh"
+spawn ssh-add /Users/vagrant/.ssh/bitrise_step_activate_ssh_key
+Identity added: /Users/vagrant/.ssh/bitrise_step_activate_ssh_key (/Users/vagrant/.ssh/bitrise_step_activate_ssh_key)
+
+[32;1mSuccess
+[0mThe SSH key was saved to /Users/vagrant/.ssh/bitrise_step_activate_ssh_key
+and was successfully added to ssh-agent.
+|                                                                              |
++---+---------------------------------------------------------------+----------+
+| [32;1m✓[0m | [32;1mActivate SSH key (RSA private key)                           [0m | 7.75 sec |
++---+---------------------------------------------------------------+----------+
+section_end:1:Activate SSH key (RSA private key)
+[0KHeader: Activate SSH key (RSA private key)
+
+
+                                        ▼
+
+section_start:1:(1) echo
+[0KHeader: (1) echo
++------------------------------------------------------------------------------+
+| (1) echo                                                                     |
++------------------------------------------------------------------------------+
+| id: script                                                                   |
+| version: 1.2.0                                                               |
+| collection: https://github.com/bitrise-io/bitrise-steplib.git                |
+| toolkit: bash                                                                |
+| time: 2023-01-27T22:18:45Z                                                   |
++------------------------------------------------------------------------------+
+|                                                                              |
+echo 2a
+echo 2b
+echo 2c
+|                                                                              |
++---+---------------------------------------------------------------+----------+
+| [32;1m✓[0m | [32;1mecho                                                         [0m | 0.79 sec |
++---+---------------------------------------------------------------+----------+
+section_end:1:echo
+[0KHeader: echo
+
+
+                                        ▼
+
+section_start:1:(2) echo
+[0KHeader: (2) echo
++------------------------------------------------------------------------------+
+| (2) echo                                                                     |
++------------------------------------------------------------------------------+
+| id: script                                                                   |
+| version: 1.2.0                                                               |
+| collection: https://github.com/bitrise-io/bitrise-steplib.git                |
+| toolkit: bash                                                                |
+| time: 2023-01-27T22:18:46Z                                                   |
++------------------------------------------------------------------------------+
+|                                                                              |
+|                                                                              |
++---+---------------------------------------------------------------+----------+
+| [32;1m✓[0m | [32;1mecho                                                         [0m | 0.91 sec |
++---+---------------------------------------------------------------+----------+
+section_end:1:echo
+[0KHeader: echo
+
+
+                                        ▼
+
+section_start:1:(3) Deploy to Bitrise.io - Apps, Logs, Artifacts
+[0KHeader: (3) Deploy to Bitrise.io - Apps, Logs, Artifacts
++------------------------------------------------------------------------------+
+| (3) Deploy to Bitrise.io - Apps, Logs, Artifacts                             |
++------------------------------------------------------------------------------+
+| id: deploy-to-bitrise-io                                                     |
+| version: 2.1.6                                                               |
+| collection: https://github.com/bitrise-io/bitrise-steplib.git                |
+| toolkit: go                                                                  |
+| time: 2023-01-27T22:18:47Z                                                   |
++------------------------------------------------------------------------------+
+|                                                                              |
+[34;1mConfig:
+[0m- PipelineIntermediateFiles: 
+- BuildURL: https://app.bitrise.io/build/ff7a6bdb-a7fb-4d71-991b-4d74e424f76b
+- APIToken: [REDACTED]
+- IsCompress: false
+- ZipName: 
+- DeployPath: /Users/vagrant/deploy
+- NotifyUserGroups: everyone
+- NotifyEmailList: 
+- IsPublicPageEnabled: true
+- PublicInstallPageMapFormat: {{range $index, $element := .}}{{if $index}}|{{end}}{{$element.File}}=>{{$element.URL}}{{end}}
+- PermanentDownloadURLMapFormat: {{range $index, $element := .}}{{if $index}}|{{end}}{{$element.File}}=>{{$element.URL}}{{end}}
+- BuildSlug: ff7a6bdb-a7fb-4d71-991b-4d74e424f76b
+- TestDeployDir: /var/folders/11/nh0v1jld7zd7b9zqm1774gtm0000gn/T/test_results3648586798
+- AppSlug: 2bf77c83826e802d
+- AddonAPIBaseURL: [REDACTED]
+- AddonAPIToken: [REDACTED]
+- DebugMode: false
+- BundletoolVersion: 1.8.1
+
+[34;1mCollecting files to deploy...
+[0mBuild Artifact deployment mode: deploying the content of the deploy directory
+List of files to deploy:
+- /Users/vagrant/deploy/test.txt
+
+[34;1mDeploying files...
+[0mDeploying file: /Users/vagrant/deploy/test.txt
+file size: 8B
+
+[32;1mSuccess
+[0mYou can find the Build Artifact on the Build's page: https://app.bitrise.io/build/ff7a6bdb-a7fb-4d71-991b-4d74e424f76b
+A map of deployed files and their permanent download urls is now available in the Environment Variable: BITRISE_PERMANENT_DOWNLOAD_URL_MAP (value: test.txt=>https://app.bitrise.io/artifact/295f1665027e0979/download)
+
+[34;1mCollecting test results...
+[0mNo test results found
+|                                                                              |
++---+---------------------------------------------------------------+----------+
+| [32;1m✓[0m | [32;1mDeploy to Bitrise.io - Apps, Logs, Artifacts                 [0m | 4.95 sec |
++---+---------------------------------------------------------------+----------+
+section_end:1:Deploy to Bitrise.io - Apps, Logs, Artifacts
+[0KHeader: Deploy to Bitrise.io - Apps, Logs, Artifacts
+
+
+
++------------------------------------------------------------------------------+
+|                          bitrise summary: dev-Dummy                          |
++---+---------------------------------------------------------------+----------+
+|   | title                                                         | time (s) |
++---+---------------------------------------------------------------+----------+
+| [32;1m✓[0m | [32;1mActivate SSH key (RSA private key)[0m                            | 7.75 sec |
++---+---------------------------------------------------------------+----------+
+| [32;1m✓[0m | [32;1mecho[0m                                                          | 0.79 sec |
++---+---------------------------------------------------------------+----------+
+| [32;1m✓[0m | [32;1mecho[0m                                                          | 0.91 sec |
++---+---------------------------------------------------------------+----------+
+| [32;1m✓[0m | [32;1mDeploy to Bitrise.io - Apps, Logs, Artifacts[0m                  | 4.95 sec |
++---+---------------------------------------------------------------+----------+
+| Total runtime: 14.40 sec                                                     |
++------------------------------------------------------------------------------+
+
+[34;1m
+[0m[34;1mSubmitting anonymized usage information...
+[0m[34;1mFor more information visit:
+[0m[34;1mhttps://github.com/bitrise-io/bitrise-plugins-analytics/blob/master/README.md
+[0m
+[32;1mBitrise build successful[0m
+================================================================================
+==============================  Bitrise Logs End  ==============================
+Build Successful 🎉
+
+ 
+🚀 Build URL: https://app.bitrise.io/build/ff7a6bdb-a7fb-4d71-991b-4d74e424f76b
+Downloading artifacts to BuildArtifacts
+Download artifact meta data 295f1665027e0979
+Downloading test.txt
+
+ 
+🚀 Build URL: https://app.bitrise.io/build/ff7a6bdb-a7fb-4d71-991b-4d74e424f76b
