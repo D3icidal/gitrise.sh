@@ -350,28 +350,34 @@ function print_logs() {
     # TODO 
     # - Currently only works with fetched (non-streamed) logs. Streaming is a whole other section
     # Doesn't display job time. To do that, you would need to find the elapsed time at the end of a job, convert to sections, and place in the section_start/end integer
-    # #    REGEX Description:
+    # pre-name the patterns in perl to make it cleaner
+    # #    REGEX Description of each perl step:
     # 1) Splits log by "bitrise summary" and only returns the first half (the summary section confuses my regex)
-    # 2) Finds the start of a section (the +----------+ stuff), and adds a line "section_start:0:job title" before that. Also adds the needed escape codes
-    # 3) Finds the end of a section the part with the ansi '\[32;1m' stuff, and adds a line for "section_end:0:job title"
-    # 4) Finds 'section_start' and replaces the spaces with underscores _
-    # 5) Finds 'section_start and replaces special charecters with underscores'
+    # 2) Finds the start and end of a section (like the +----------+ stuff), and adds a line "section_start/end:0:job title" around that. Also adds the needed escape codes
+    # 3) Finds 'section_start' and replaces the spaces with underscores _
     # 4) Finds 'section_end' and replaces the spaces with underscores _
-    # 5) Finds 'section_end and replaces special charecters with underscores'
-    # 6) Finds 'section_start' and, right before the carriage return \r, adds [collapsed=true] to autocollapse the section
-    # 7) Splits log by "bitrise summary" and only returns the second half (the summary section confuses my regex) - which doesn't get folded
+    # 5) Finds 'section_start and replaces special charecters with underscores'
+    # 6) Finds 'section_end and replaces special charecters with underscores'
+    # 7) Finds 'section_start' and, right before the carriage return \r, adds [collapsed=true] to autocollapse the section
+    # 8) Splits log by "bitrise summary" and only returns the second half (the summary section confuses my regex) - which doesn't get folded anyway
+    #
+    # Unused:
+    # 2) Finds the start of a section (the +----------+ stuff), and adds a line "section_start:0:job title" before that. Also adds the needed escape codes
+        # | perl -0p -e 's/([\+-]+\n^\|\s\((\d+)\)\s([\D\S]*?)(?=\s{2,})\s*\|)/section_start\:0\:$3\r\033\[0K        \033[0;36m$3\n$1/gm' \
+    # 3) Finds the end of a section the part with the ansi '\[32;1m' stuff, and adds a line for "section_end:0:job title"
+        # | perl -0p -e 's/( \| [[:cntrl:]]\[\d+;\dm(.+?) (\(Failed\))* (.*?))(\n +▼)/$1section_end\:1\:$2\r\033\[0K$5/gms' \
     # 
     echo "================================================================================"
     echo "============================== Bitrise Logs Start =============================="
     echo "$logs" \
-    | perl -0p -e 's/([\+-]+\n^\|\s\((\d+)\)\s([\D\S]*?)(?=\s{2,})\s*\|)/$1/gm' \
-    | perl -0p -e 's/([\+-]+\n^\|\s(\(\d+\)\s)(\D*?)(?=\s{2,})\s*\|)/section_start\:0\:$3\r\033\[0K\tz\033[0;36m $3\n$1/gm' \
-    | perl -0p -e 's/(\|.*\[\d+;\d+m(.*?)\s+\(Failed\)(?=\s{2,}).+\n[\+-]+)/$1\nsection_end\:0\:$2\r\033\[0K/gm' \
+    | perl -0p -e 's/([.*\S\s]+)(^[\+-]+\n\|\s+bitrise summary[.*\S\s]+)/$1/gm' \
+    | perl -0p -e '$epoc = time(); s/([\+-]+\n^\|\s\((\d+)\)\s([\D\S]*?)(?=\s{2,})\s*\|.+? \| [[:cntrl:]](\[\d+;\dm)(.+?) (\(Failed\)|\(Skipped\))* (.*?))(\n +▼)/section_start:$epoc:$3\r\033\[0K\033$4Step ($2) $6- $3\033[0m\n$1section_end:123456:$3\n$8/gms' \
     | perl -0p -e 's/(?<=section_start|\G)(\S+)( )/$1_/gm' \
-    | perl -0p -e 's/(?<=section_start:\d:|\G)([a-zA-Z0-9_ :]+)([[:punct:]]+)/$1_/gm' \
     | perl -0p -e 's/(?<=section_end|\G)(\S+)( )/$1_/gm' \
-    | perl -0p -e 's/(?<=section_end:\d:|\G)([a-zA-Z0-9_ :]+)([[:punct:]]+)/$1_/gm' \
-    | perl -0p -e 's/(?<=section_start:\d:|\G)(.+)\r/$1\[collapsed=true\]\r/gm'
+    | perl -0p -e 's/(?<=section_start:\d{10}|\d:|\G)([a-zA-Z0-9_ :]+)([[:punct:]]+)/$1/gm' \
+    | perl -0p -e 's/(?<=section_end:\d{10}|\d:|\G)([a-zA-Z0-9_ :]+)([[:punct:]]+)/$1/gm' \
+    | perl -0p -e 's/(?<=section_start:\d{10}|\d:|\G)(.*)\r/$1\[collapsed=true\]\r/gm'
+    
     echo "$logs" | perl -0p -e 's/([.*\S\s]+)(^[\+-]+\n\|\s+bitrise summary[.*\S\s]+)/$2/gm'
     echo "================================================================================"
     echo "==============================  Bitrise Logs End  =============================="
