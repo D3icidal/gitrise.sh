@@ -367,11 +367,17 @@ function print_logs() {
     # 3) Finds the end of a section the part with the ansi '\[32;1m' stuff, and adds a line for "section_end:0:job title"
         # | perl -0p -e 's/( \| [[:cntrl:]]\[\d+;\dm(.+?) (\(Failed\))* (.*?))(\n +▼)/$1section_end\:1\:$2\r\033\[0K$5/gms' \
     # 
+    # Testing / Dev:
+    # - brew install perl bash
+    # - you can test in terminal by first entering bash: `$ bash` 
+    # - then populate `$logs` locally: logs=$(bash /Users/P2955338/Charter/Repos/spectrumtv_ios_playground/gitrise.sh -a "TOKEN" -s APPSLUG -w dev-Dummy -b CI/Bitrise_Develop --poll 10 --download BuildArtifacts) 
+    # - then run the commands, but pipe to textmate to match how it looks in gitlab: `echo "$logs" | perl -0p -e 'FIRST_COMMANd' | perl -0p -e 'SECOND_COMMAND' | mate -e`
+    #
     echo "================================================================================"
     echo "============================== Bitrise Logs Start =============================="
     echo "$logs" \
-    | perl -0p -e 's/([.*\S\s]+)(^[\+-]+\n\|\s+bitrise summary[.*\S\s]+)/$1/gm' \
-    | perl -0p -e '$epoc = time(); s/([\+-]+\n^\|\s\((\d+)\)\s([\D\S]*?)(?=\s{2,})\s*\|.+? \| [[:cntrl:]](\[\d+;\dm)(.+?) (\(Failed\)|\(Skipped\))* (.*?))(\n +▼)/section_start:$epoc:$3\r\033\[0K\033$4Step ($2) $6- $3\033[0m\n$1section_end:$epoc:$3\n$8/gms' \
+    | perl -0p -e 's/([.*\S\s]+)(^[\+-]+\n\|\s+bitrise summary[.*\S\s]+)/$1 \n ▼/gm' \
+    | perl -0p -e '$epoc = time(); s/([\+-]+\n^\|\s\((\d+)\)\s([\D\S]*?)(?=\s{2,})\s*\|.+? \| [[:cntrl:]](\[\d+;\dm)(.+?) (\(Failed\)|\(Skipped\))* (.*?))(\n +▼)/section_start:$epoc:$3_$2\r\033\[0K\033$4Step ($2) $6- $3\033[0m\n$1section_end:$epoc:$3\n$8/gms' \
     | perl -0p -e 's/(?<=section_start|\G)(\S+)( )/$1_/gm' \
     | perl -0p -e 's/(?<=section_end|\G)(\S+)( )/$1_/gm' \
     | perl -0p -e 's/(?<=section_start:\d{10}|\d:|\G)([a-zA-Z0-9_ :]+)([[:punct:]]+)/$1/gm' \
