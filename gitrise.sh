@@ -18,12 +18,13 @@ log_url=""
 
 function usage() {
     echo ""
-    echo "Usage: gitrise.sh [-d] [-e] [-h] [-T] [-v]  -a token -s project_slug -w workflow [-b branch|-t tag|-c commit]"
-    echo 
+    echo "Usage: gitrise.sh [-d] [-e] [-h] [-T] [-v]  -a token -s project_slug -w workflow [-b branch|-t tag|-c commit] [-D directory]"
+    echo
     echo "  -a, --access-token  <string>    Bitrise access token"
     echo "  -b, --branch        <string>    Git branch"
     echo "  -c, --commit        <string>    Git commit hash "
     echo "  -d, --debug                     Debug mode enabled"
+    echo "  -D, --download      <string>    Download artifacts to specified directory"
     echo "  -e, --env           <string>    List of environment variables in the form of key1:value1,key2:value2"
     echo "  -h, --help                      Print this help text"
     echo "  -p, --poll           <string>   Polling interval (in seconds) to get the build status."
@@ -33,7 +34,7 @@ function usage() {
     echo "  -t, --tag           <string>    Git tag"
     echo "  -v, --version                   App version"
     echo "  -w, --workflow      <string>    Bitrise workflow"
-    echo 
+    echo
 }
 
 # parsing space separated options
@@ -74,7 +75,7 @@ while [ $# -gt 0 ]; do
     ;;
     -h|--help)
         usage
-        exit 0 
+        exit 0
     ;;
     -T|--test)
         TESTING_ENABLED="true"
@@ -84,6 +85,11 @@ while [ $# -gt 0 ]; do
         DEBUG="true"
         shift
     ;;
+    -D | --download)
+        DOWNLOAD_ARTIFACTS="true"
+        DOWNLOAD_DIR="$2"
+        shift;shift
+    ;;
     --stream)
         STREAM="true"
         shift
@@ -92,7 +98,7 @@ while [ $# -gt 0 ]; do
         STATUS_POLLING_INTERVAL="$2"
         shift;shift
     ;;
-    *) 
+    *)
         echo "Invalid option '$1'"
         usage
         exit 1
@@ -101,8 +107,8 @@ while [ $# -gt 0 ]; do
 done
 
 # Create temp directory if debugging mode enabled
-if [ "$DEBUG" == "true" ]; then  
-    [ -d gitrise_temp ] && rm -r gitrise_temp 
+if [ "$DEBUG" == "true" ]; then
+    [ -d gitrise_temp ] && rm -r gitrise_temp
     mkdir -p gitrise_temp
 fi
 
@@ -132,7 +138,7 @@ function validate_input() {
     fi
 }
 
-# map environment variables to objects Bitrise will accept. 
+# map environment variables to objects Bitrise will accept.
 # ENV_STRING is passed as argument
 function process_env_vars() {
     local env_string=""
@@ -162,7 +168,7 @@ function process_env_vars() {
 }
 
 function generate_build_payload() {
-    local environments=$(process_env_vars "$ENV_STRING")   
+    local environments=$(process_env_vars "$ENV_STRING")
     cat << EOF
 {
   "build_params": {
@@ -181,40 +187,40 @@ EOF
 
 function trigger_build() {
     local response=""
-    if [ -z "${TESTING_ENABLED}" ]; then 
+    if [ -z "${TESTING_ENABLED}" ]; then
         local command="curl --silent -X POST https://api.bitrise.io/v0.1/apps/$PROJECT_SLUG/builds \
                 --data '$(generate_build_payload)' \
                 --header 'Accept: application/json' --header 'Authorization: $ACCESS_TOKEN'"
-        response=$(eval "${command}") 
+        response=$(eval "${command}")
     else
         response=$(<./testdata/"$1"_build_trigger_response.json)
     fi
     [ "$DEBUG" == "true" ] && log "${command%'--data'*}" "$response" "trigger_build.log"
-    
+
     status=$(echo "$response" | jq ".status" | sed 's/"//g' )
     if [ "$status" != "ok" ]; then
         msg=$(echo "$response" | jq ".message" | sed 's/"//g')
         printf "%s" "ERROR: $msg"
         exit 1
-    else 
+    else
         build_url=$(echo "$response" | jq ".build_url" | sed 's/"//g')
         build_slug=$(echo "$response" | jq ".build_slug" | sed 's/"//g')
     fi
-    printf "\nHold on... We're about to liftoff! 🚀\n \nBuild URL: %s\n" "${build_url}"
+    printf "\nHold on... We're about to liftoff! 🚀\n \n Bitrise Build URL: %s\n" "${build_url}"
 }
 
 function process_build() {
     local status_counter=0
     local current_log_chunks_positions=()
     while [ "${build_status}" = 0 ]; do
-        # Parameter is a test json file name and is only passed for testing. 
+        # Parameter is a test json file name and is only passed for testing.
         check_build_status "$1"
         if [[ "$STREAM" == "true" ]] && [[ "$current_build_status_text" != "on-hold" ]]; then stream_logs; fi
         if [[ $TESTING_ENABLED == true ]] && [[ "${FUNCNAME[1]}" != "testFailureUponReceivingHTMLREsponse" ]]; then break; fi
         sleep "$STATUS_POLLING_INTERVAL"
     done
     if [ "$build_status" = 1 ]; then exit_code=0; else exit_code=1; fi
-} 
+}
 
 function check_build_status() {
     local response=""
@@ -236,7 +242,7 @@ function check_build_status() {
                 ((status_counter++))
             else
                 echo "ERROR: Invalid response received from Bitrise API"
-                build_status="null" 
+                build_status="null"
             fi
         fi
 }
@@ -307,16 +313,80 @@ function get_build_logs() {
     fi
 }
 
+
+download_artifacts() {
+  if [ "$DOWNLOAD_ARTIFACTS" = "true" ]; then
+    OUTPUT_DIR=${DOWNLOAD_DIR:-'./'}
+    # Ensure directory OUTPUT_DIR exist
+    mkdir -p "$OUTPUT_DIR"
+    echo -e "section_start:`date +%s`:Download_Artifacts[collapsed=true]\r\e[0KDownload Artifacts"
+    echo "Downloading artifacts to $OUTPUT_DIR"
+    # Get artifacts slug
+    local command="curl --silent -X GET https://api.bitrise.io/v0.1/apps/$PROJECT_SLUG/builds/$build_slug/artifacts \
+                  --header 'Accept: application/json' --header 'Authorization: $ACCESS_TOKEN'"
+    response=$(eval "$command")
+    artifacts_slug=$(echo "$response" | jq --raw-output '.data[] .slug')
+    for artifact_slug in $artifacts_slug; do
+      echo "Download artifact meta data $artifact_slug"
+
+      command="curl --silent -X GET https://api.bitrise.io/v0.1/apps/$PROJECT_SLUG/builds/$build_slug/artifacts/$artifact_slug \
+                    --header 'Accept: application/json' --header 'Authorization: $ACCESS_TOKEN'" 
+
+      response=$(eval "$command")
+      artifact_url=$(echo "$response" | jq --raw-output '.data.expiring_download_url')
+      artifact_name=$(echo "$response" | jq --raw-output '.data.title')
+      echo "Downloading $artifact_name from $artifact_url"
+      curl "$artifact_url" --output "$OUTPUT_DIR/$artifact_name"
+    done
+    echo -e "section_end:`date +%s`:Download_Artifacts\r\e[0K"
+  fi
+
+  printf "\n \n🚀  Bitrise Build URL: %s\n" "${build_url}"
+}
+
 function print_logs() {
     local url="$1"
     local logs=$(curl --silent -X GET "$url")
-
+    # TODO 
+    # - Currently only works with fetched (non-streamed) logs. Streaming is a whole other section
+    # Doesn't display job time. To do that, you would need to find the elapsed time at the end of a job, convert to sections, and place in the section_start/end integer
+    # pre-name the patterns in perl to make it cleaner
+    # #    REGEX Description of each perl step:
+    # 1) Splits log by "bitrise summary" and only returns the first half (the summary section confuses my regex)
+    # 2) Finds the start and end of a section (like the +----------+ stuff), and adds a line "section_start/end:0:job title" around that. Also adds the needed escape codes
+    # 3) Finds 'section_start' and replaces the spaces with underscores _
+    # 4) Finds 'section_end' and replaces the spaces with underscores _
+    # 5) Finds 'section_start and replaces special charecters with underscores'
+    # 6) Finds 'section_end and replaces special charecters with underscores'
+    # 7) Finds 'section_start' and, right before the carriage return \r, adds [collapsed=true] to autocollapse the section
+    # 8) Splits log by "bitrise summary" and only returns the second half (the summary section confuses my regex) - which doesn't get folded anyway
+    #
+    # Unused:
+    # 2) Finds the start of a section (the +----------+ stuff), and adds a line "section_start:0:job title" before that. Also adds the needed escape codes
+        # | perl -0p -e 's/([\+-]+\n^\|\s\((\d+)\)\s([\D\S]*?)(?=\s{2,})\s*\|)/section_start\:0\:$3\r\033\[0K        \033[0;36m$3\n$1/gm' \
+    # 3) Finds the end of a section the part with the ansi '\[32;1m' stuff, and adds a line for "section_end:0:job title"
+        # | perl -0p -e 's/( \| [[:cntrl:]]\[\d+;\dm(.+?) (\(Failed\))* (.*?))(\n +▼)/$1section_end\:1\:$2\r\033\[0K$5/gms' \
+    # 
+    # Testing / Dev:
+    # - brew install perl bash
+    # - you can test in terminal by first entering bash: `$ bash` 
+    # - then populate `$logs` locally: logs=$(bash /Users/P2955338/Charter/Repos/spectrumtv_ios_playground/gitrise.sh -a "TOKEN" -s APPSLUG -w dev-Dummy -b CI/Bitrise_Develop --poll 10 --download BuildArtifacts) 
+    # - then run the commands, but pipe to textmate to match how it looks in gitlab: `echo "$logs" | perl -0p -e 'FIRST_COMMANd' | perl -0p -e 'SECOND_COMMAND' | mate -e`
+    #
     echo "================================================================================"
     echo "============================== Bitrise Logs Start =============================="
-    echo "$logs"
+    echo "$logs" \
+    | perl -0p -e 's/([.*\S\s]+)(^[\+-]+\n\|\s+bitrise summary[.*\S\s]+)/$1 ▼\n/gm' \
+    | perl -0p -e '$epoc = time(); s/([\+-]+\n^\|\s\((\d+)\)\s([\D\S]*?)(?=\s{2,})\s*\|.+? \| [[:cntrl:]](\[\d+;\dm)(.+?) (\(Failed\)|\(Skipped\))* .+?\[0m( \| [\d\.]+ \w{3})(.*?))(\n +▼)/section_start:$epoc:$3\r\033\[0K\033$4Step ($2) $6- $3$7\033[0m\n$1section_end:$epoc:$3\r\033\[0K\n$9/gms' \
+    | perl -0p -e 's/(?<=section_start|\G)(\S+)( )/$1_/gm' \
+    | perl -0p -e 's/(?<=section_end|\G)(\S+)( )/$1_/gm' \
+    | perl -0p -e 's/(?<=section_start:\d{10}|\d:|\G)([a-zA-Z0-9_ :]+)([[:punct:]]+)/$1/gm' \
+    | perl -0p -e 's/(?<=section_end:\d{10}|\d:|\G)([a-zA-Z0-9_ :]+)([[:punct:]]+)/$1/gm' \
+    | perl -0p -e 's/(section_start:(\d{10}|\d):.*)\r/$1\[collapsed=true\]\r/gm'
+    
+    echo "$logs" | perl -0p -e 's/([.*\S\s]+)(^[\+-]+\n\|\s+bitrise summary[.*\S\s]+)/$2/gm'
     echo "================================================================================"
     echo "==============================  Bitrise Logs End  =============================="
-
 }
 
 function build_status_message() {
@@ -327,9 +397,11 @@ function build_status_message() {
             ;;
         "1")
             echo "Build Successful 🎉"
+            printf "\n \n🚀  Bitrise Build URL: %s\n" "${build_url}"
             ;;
         "2")
             echo "Build Failed 🚨"
+            printf "\n \n🚀  Bitrise Build URL: %s\n" "${build_url}"
             ;;
         "3")
             echo "Build Aborted 💥"
@@ -353,14 +425,15 @@ function log() {
     printf "%b" "\n[$(TZ="EST6EDT" date +'%T')] REQUEST: ${secured_request}\n[$(TZ="EST6EDT" date +'%T')] RESPONSE: $response\n" >> ./gitrise_temp/"$log_file"
 }
 
-# No function execution when the script is sourced 
+# No function execution when the script is sourced
 # shellcheck disable=SC2119
 # disables "use foo "$@" if function's $1 should mean script's $1."
 if [ "$0" = "${BASH_SOURCE[0]}" ] && [ -z "${TESTING_ENABLED}" ]; then
     validate_input
     trigger_build
     process_build
-    [ -z "$STREAM" ] && get_build_logs 
+    [ -z "$STREAM" ] && get_build_logs
     build_status_message "$build_status"
+    download_artifacts
     exit ${exit_code}
 fi
