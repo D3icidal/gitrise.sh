@@ -334,8 +334,11 @@ function build_status_message() {
         "3")
             echo "Build Aborted 💥"
             ;;
+        "4")
+            echo "Build Aborted with Success 🤔"
+            ;;
         *)
-            echo "Invalid build status 🤔"
+            echo "Invalid build status 🤒️"
             exit 1
             ;;
     esac
