@@ -4,19 +4,19 @@
 # Not following: (error message here)
 # Declare and assign separately to avoid masking return values.
 
-testMissingWorkflow(){
+testMissingWorkflow() {
     local expected_message="ERROR: Missing arguments(s). All these args must be passed: --workflow,--slug,--access-token"
     local actual_message=$(./gitrise.sh -b "test-branch" -s "test-slug" -a "test-token")
     assertContains "Output message does not match." "${actual_message}" "${expected_message}"
 }
 
-testMissingProjectSlug(){
+testMissingProjectSlug() {
     local expected_message="ERROR: Missing arguments(s). All these args must be passed: --workflow,--slug,--access-token"
     local actual_message=$(./gitrise.sh -b "test-branch" -w "workflow" -a "test-token")
     assertContains "Output message does not match." "${actual_message}" "${expected_message}"
 }
 
-testMissingRequiredOptions(){
+testMissingRequiredOptions() {
     local expected_message="ERROR: Missing arguments(s). All these args must be passed: --workflow,--slug,--access-token"
     local actual_message=$(./gitrise.sh)
     assertContains "Output message does not match." "${actual_message}" "${expected_message}"
