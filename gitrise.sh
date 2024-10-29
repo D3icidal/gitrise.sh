@@ -306,8 +306,12 @@ function get_build_logs() {
     done
     log_url=$(echo "$response" | jq ".expiring_raw_log_url" | sed 's/"//g')
     if ! "$log_is_archived" || [ -z "$log_url" ]; then
-        echo "LOGS WERE NOT AVAILABLE - navigate to $build_url to see the logs."
-        exit ${exit_code}
+        echo "LOGS WERE NOT AVAILABLE! - Trying again in 5 minutes
+        sleep 300
+        if ! "$log_is_archived" || [ -z "$log_url" ]; then
+            echo "LOGS WERE NOT AVAILABLE - navigate to $build_url to see the logs."
+            exit ${exit_code}
+        fi
     else
         print_logs "$log_url"
     fi
@@ -339,9 +343,9 @@ download_artifacts() {
       curl "$artifact_url" --output "$OUTPUT_DIR/$artifact_name"
     done
     echo -e "section_end:`date +%s`:Download_Artifacts\r\e[0K"
+    # echo "Download Done!"
   fi
 
-  printf "\n \n🚀  Bitrise Build URL: %s\n" "${build_url}"
 }
 
 function print_logs() {
@@ -368,16 +372,16 @@ function print_logs() {
         # | perl -0p -e 's/( \| [[:cntrl:]]\[\d+;\dm(.+?) (\(Failed\))* (.*?))(\n +▼)/$1section_end\:1\:$2\r\033\[0K$5/gms' \
     # 
     # Testing / Dev:
-    # - brew install perl bash
+    # - brew install perl bash          # if you haven't already updated perl and bash
     # - you can test in terminal by first entering bash: `$ bash` 
-    # - then populate `$logs` locally: logs=$(bash /Users/P2955338/Charter/Repos/spectrumtv_ios_playground/gitrise.sh -a "TOKEN" -s APPSLUG -w dev-Dummy -b CI/Bitrise_Develop --poll 10 --download BuildArtifacts) 
-    # - then run the commands, but pipe to textmate to match how it looks in gitlab: `echo "$logs" | perl -0p -e 'FIRST_COMMANd' | perl -0p -e 'SECOND_COMMAND' | mate -e`
+    #   - then populate `$logs` locally: ` logs=$(bash /Users/P2955338/Charter/Repos/spectrumtv_ios_playground/gitrise.sh -a "TOKEN" -s APPSLUG -w dev-Dummy -b CI/Bitrise_Develop --poll 10 --download BuildArtifacts) `
+    #   - then run the commands, but pipe to textmate to match how it looks in gitlab: `echo "$logs" | perl -0p -e 'FIRST_COMMANd' | perl -0p -e 'SECOND_COMMAND' | mate -e`
     #
     echo "================================================================================"
     echo "============================== Bitrise Logs Start =============================="
     echo "$logs" \
-    | perl -0p -e 's/([.*\S\s]+)(^[\+-]+\n\|\s+bitrise summary[.*\S\s]+)/$1 ▼\n/gm' \
-    | perl -0p -e '$epoc = time(); s/([\+-]+\n^\|\s\((\d+)\)\s([\D\S]*?)(?=\s{2,})\s*\|.+? \| [[:cntrl:]](\[\d+;\dm)(.+?) (\(Failed\)|\(Skipped\))* .+?\[0m( \| [\d\.]+ \w{3})(.*?))(\n +▼)/section_start:$epoc:$3\r\033\[0K\033$4Step ($2) $6- $3$7\033[0m\n$1section_end:$epoc:$3\r\033\[0K\n$9/gms' \
+    | perl -0p -e 's/([.*\S\s]+)(^[\+-]+\n\|\s+bitrise summary[.*\S\s]+)/$1  ▼\n \n/gm' \
+    | perl -0p -e '$epoc = time(); s/([\+-]+\n^\|\s\((\d+)\)\s([\D\S]*?)(?=\s{2,}|\.{3})\s*\|.+? \| [[:cntrl:]](\[\d+;\dm)(.+?) (\(Failed\)|\(Skipped\))* .+?\[0m( \| [\d\.]+ \w{3})(.*?))(\n +▼)/section_start:$epoc:$3\r\033\[0K\033$4Step ($2) $6- $3$7\033[0m\n$1section_end:$epoc:$3\r\033\[0K\n$9/gms' \
     | perl -0p -e 's/(?<=section_start|\G)(\S+)( )/$1_/gm' \
     | perl -0p -e 's/(?<=section_end|\G)(\S+)( )/$1_/gm' \
     | perl -0p -e 's/(?<=section_start:\d{10}|\d:|\G)([a-zA-Z0-9_ :]+)([[:punct:]]+)/$1/gm' \
