@@ -24,7 +24,7 @@ function usage() {
     echo "  -b, --branch               <string>    Git branch"
     echo "  -c, --commit               <string>    Git commit hash "
     echo "  -d, --debug                            Debug mode enabled"
-    echo "      --download-artifacts   <string>    List of build artifact names to download in the form of name1,name2" 
+    echo "  -D, --download             <string>    Download artifacts to specified directory"
     echo "  -e, --env                  <string>    List of environment variables in the form of key1:value1,key2:value2"
     echo "  -h, --help                             Print this help text"
     echo "  -p, --poll                  <string>   Polling interval (in seconds) to get the build status."
@@ -85,16 +85,17 @@ while [ $# -gt 0 ]; do
         DEBUG="true"
         shift
     ;;
+    -D | --download)
+        DOWNLOAD_ARTIFACTS="true"
+        DOWNLOAD_DIR="$2"
+        shift;shift
+    ;;
     --stream)
         STREAM="true"
         shift
     ;;
     -p|--poll)
         STATUS_POLLING_INTERVAL="$2"
-        shift;shift
-    ;;
-    --download-artifacts)
-        BUILD_ARTIFACTS="$2"
         shift;shift
     ;;
     *) 
@@ -239,17 +240,17 @@ function check_build_status() {
     fi
     [ "$DEBUG" == "true" ] && log "${command%%'--header'*}" "$response" "get_build_status.log"
 
-    if [[ "$response" != *"<!DOCTYPE html>"* ]]; then
-        handle_status_response "${response%'status_code'*}"
-    else
-        if [[ $status_counter -lt $retry ]]; then
-            build_status=0
-            ((status_counter++))
+        if [[ "$response" != *"<!DOCTYPE html>"* ]]; then
+            handle_status_response "${response%'status_code'*}"
         else
-            echo "ERROR: Invalid response received from Bitrise API"
-            build_status="null" 
+            if [[ $status_counter -lt $retry ]]; then
+                build_status=0
+                ((status_counter++))
+            else
+                echo "ERROR: Invalid response received from Bitrise API"
+                build_status="null" 
+            fi
         fi
-    fi
 }
 
 function handle_status_response() {
@@ -505,7 +506,6 @@ if [ "$0" = "${BASH_SOURCE[0]}" ] && [ -z "${TESTING_ENABLED}" ]; then
     process_build
     [ -z "$STREAM" ] && get_build_logs
     build_status_message "$build_status"
-    [ -n "$BUILD_ARTIFACTS" ] && download_build_artifacts
     exit ${exit_code}
 fi
 
