@@ -319,7 +319,7 @@ function get_build_logs() {
         ((counter++))
     done
     log_url=$(echo "$response" | jq ".expiring_raw_log_url" | sed 's/"//g')
-    if ! "$log_is_archived" || [ -z "$log_url"]; then
+    if ! "$log_is_archived" || [ -z "$log_url" ]; then
         echo "LOGS WERE NOT AVAILABLE! - Trying again in 5 minutes"
         sleep 300
         if ! "$log_is_archived" || [ -z "$log_url" ]; then
