@@ -403,6 +403,11 @@ function print_logs() {
     echo "$logs" | perl -0p -e 's/([.*\S\s]+)(^[\+-]+\n\|\s+bitrise summary[.*\S\s]+)/$2/gm'
     echo "================================================================================"
     echo "==============================  Bitrise Logs End  =============================="
+
+    # Print errors if found
+    echo "$logs" | perl -ne 'push @errors, $_ if /^❌/; END { print "\033[1m\033[31m\n\n\tPossible Errors Discovered:\033[0m\n", @errors if @errors }'
+    # echo "$logs" | perl -ne 'push @errors, $_ if /^❌/; END { print "\n\n\tPossible Errors Discovered:\n", @errors if @errors }'
+    
 }
 
 function build_status_message() {
