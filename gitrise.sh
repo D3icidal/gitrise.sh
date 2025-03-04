@@ -405,8 +405,9 @@ function print_logs() {
     echo "==============================  Bitrise Logs End  =============================="
 
     # Print errors if found
-    echo "$logs" | perl -ne 'push @errors, $_ if /^❌/; END { print "\033[1m\033[31m\n\n\tPossible Errors Discovered:\033[0m\n", @errors if @errors }'
+    echo "$logs" | perl -ne 'push @errors, $_ if /^❌/; END { print "\033[1m\033[31m\n\n\t\tPossible Errors Discovered:\033[0m\n\n", @errors if @errors }'
     # echo "$logs" | perl -ne 'push @errors, $_ if /^❌/; END { print "\n\n\tPossible Errors Discovered:\n", @errors if @errors }'
+    echo "$logs" | grep -q "Unauthorized Access" && echo -e "\033[1m\033[31m\n\n\t\tUnauthorized Access!\n\tAsk a Prod Eng or Team Lead to renew the Fastlane AppStoreConnect Session!"\033[0m\n\n"
     
 }
 
