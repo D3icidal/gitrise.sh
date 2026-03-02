@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
+
 # shellcheck disable=SC2155
 # disbales "Declare and assign separately to avoid masking return values."
 # shellcheck disable=SC2120
 # disables "foo references arguments, but none are ever passed."
 
-VERSION="0.9.1"
+VERSION="0.10.0-thomasng"
 APP_NAME="Gitrise"
 STATUS_POLLING_INTERVAL=30
 
@@ -12,28 +13,29 @@ build_slug=""
 build_url=""
 build_status=0
 current_build_status_text=""
-exit_code=""
+exit_code=0
 log_url=""
+build_artifacts_slugs=()
 
 function usage() {
     echo ""
-    echo "Usage: gitrise.sh [-d] [-e] [-h] [-T] [-v]  -a token -s project_slug -w workflow [-b branch|-t tag|-c commit] [-D directory]"
-    echo
-    echo "  -a, --access-token  <string>    Bitrise access token"
-    echo "  -b, --branch        <string>    Git branch"
-    echo "  -c, --commit        <string>    Git commit hash "
-    echo "  -d, --debug                     Debug mode enabled"
-    echo "  -D, --download      <string>    Download artifacts to specified directory"
-    echo "  -e, --env           <string>    List of environment variables in the form of key1:value1,key2:value2"
-    echo "  -h, --help                      Print this help text"
-    echo "  -p, --poll           <string>   Polling interval (in seconds) to get the build status."
-    echo "      --stream                    Stream build logs"
-    echo "  -s, --slug          <string>    Bitrise project slug"
-    echo "  -T, --test                      Test mode enabled"
-    echo "  -t, --tag           <string>    Git tag"
-    echo "  -v, --version                   App version"
-    echo "  -w, --workflow      <string>    Bitrise workflow"
-    echo
+    echo "Usage: gitrise.sh [-d] [-e] [-h] [-T] [-v]  -a token -s project_slug -w workflow [-b branch|-t tag|-c commit]"
+    echo 
+    echo "  -a, --access-token         <string>    Bitrise access token"
+    echo "  -b, --branch               <string>    Git branch"
+    echo "  -c, --commit               <string>    Git commit hash "
+    echo "  -d, --debug                            Debug mode enabled"
+    echo "      --download-artifacts   <string>    List of build artifact names to download in the form of name1,name2 or 'all' to download all artifacts" 
+    echo "  -e, --env                  <string>    List of environment variables in the form of key1:value1,key2:value2"
+    echo "  -h, --help                             Print this help text"
+    echo "  -p, --poll                  <string>   Polling interval (in seconds) to get the build status."
+    echo "      --stream                           Stream build logs"
+    echo "  -s, --slug                  <string>   Bitrise project slug"
+    echo "  -T, --test                             Test mode enabled"
+    echo "  -t, --tag                   <string>   Git tag"
+    echo "  -v, --version                          App version"
+    echo "  -w, --workflow              <string>   Bitrise workflow"
+    echo 
 }
 
 # parsing space separated options
@@ -74,7 +76,7 @@ while [ $# -gt 0 ]; do
     ;;
     -h|--help)
         usage
-        exit 0
+        exit 0 
     ;;
     -T|--test)
         TESTING_ENABLED="true"
@@ -84,11 +86,6 @@ while [ $# -gt 0 ]; do
         DEBUG="true"
         shift
     ;;
-    -D | --download)
-        DOWNLOAD_ARTIFACTS="true"
-        DOWNLOAD_DIR="$2"
-        shift;shift
-    ;;
     --stream)
         STREAM="true"
         shift
@@ -97,7 +94,11 @@ while [ $# -gt 0 ]; do
         STATUS_POLLING_INTERVAL="$2"
         shift;shift
     ;;
-    *)
+    --download-artifacts)
+        BUILD_ARTIFACTS="$2"
+        shift;shift
+    ;;
+    *) 
         echo "Invalid option '$1'"
         usage
         exit 1
@@ -106,8 +107,8 @@ while [ $# -gt 0 ]; do
 done
 
 # Create temp directory if debugging mode enabled
-if [ "$DEBUG" == "true" ]; then
-    [ -d gitrise_temp ] && rm -r gitrise_temp
+if [ "$DEBUG" == "true" ]; then  
+    [ -d gitrise_temp ] && rm -r gitrise_temp 
     mkdir -p gitrise_temp
 fi
 
@@ -143,7 +144,7 @@ function validate_input() {
     fi
 }
 
-# map environment variables to objects Bitrise will accept.
+# map environment variables to objects Bitrise will accept. 
 # ENV_STRING is passed as argument
 function process_env_vars() {
     local env_string=""
@@ -155,7 +156,7 @@ function process_env_vars() {
             env_string+=$line
         done <<< "$1"
     else
-    env_string="$1"
+        env_string="$1"
     fi
     IFS=',' read -r -a env_array <<< "$env_string"
     for i in "${env_array[@]}"
@@ -173,7 +174,7 @@ function process_env_vars() {
 }
 
 function generate_build_payload() {
-    local environments=$(process_env_vars "$ENV_STRING")
+    local environments=$(process_env_vars "$ENV_STRING")   
     cat << EOF
 {
   "build_params": {
@@ -192,64 +193,64 @@ EOF
 
 function trigger_build() {
     local response=""
-    if [ -z "${TESTING_ENABLED}" ]; then
+    if [ -z "${TESTING_ENABLED}" ]; then 
         local command="curl --silent -X POST https://api.bitrise.io/v0.1/apps/$PROJECT_SLUG/builds \
                 --data '$(generate_build_payload)' \
                 --header 'Accept: application/json' --header 'Authorization: $ACCESS_TOKEN'"
-        response=$(eval "${command}")
+        response=$(eval "${command}") 
     else
         response=$(<./testdata/"$1"_build_trigger_response.json)
     fi
     [ "$DEBUG" == "true" ] && log "${command%'--data'*}" "$response" "trigger_build.log"
-
+    
     status=$(echo "$response" | jq ".status" | sed 's/"//g' )
     if [ "$status" != "ok" ]; then
         msg=$(echo "$response" | jq ".message" | sed 's/"//g')
         printf "%s" "ERROR: $msg"
         exit 1
-    else
+    else 
         build_url=$(echo "$response" | jq ".build_url" | sed 's/"//g')
         build_slug=$(echo "$response" | jq ".build_slug" | sed 's/"//g')
     fi
-    printf "\nHold on... We're about to liftoff! 🚀\n \n Bitrise Build URL: %s\n" "${build_url}"
+    printf "\nHold on... We're about to liftoff! 🚀\n \nBuild URL: %s\n" "${build_url}"
 }
 
 function process_build() {
     local status_counter=0
     local current_log_chunks_positions=()
     while [ "${build_status}" = 0 ]; do
-        # Parameter is a test json file name and is only passed for testing.
+        # Parameter is a test json file name and is only passed for testing. 
         check_build_status "$1"
         if [[ "$STREAM" == "true" ]] && [[ "$current_build_status_text" != "on-hold" ]]; then stream_logs; fi
         if [[ $TESTING_ENABLED == true ]] && [[ "${FUNCNAME[1]}" != "testFailureUponReceivingHTMLREsponse" ]]; then break; fi
         sleep "$STATUS_POLLING_INTERVAL"
     done
-    if [ "$build_status" = 1 ]; then exit_code=0; else exit_code=1; fi
-}
+    if [ "$build_status" != 1 ]; then exit_code=$(( exit_code + 1 )); fi
+} 
 
 function check_build_status() {
     local response=""
     local retry=3
-        if [ -z "${TESTING_ENABLED}" ]; then
-            local command="curl --silent -X GET -w \"status_code:%{http_code}\" https://api.bitrise.io/v0.1/apps/$PROJECT_SLUG/builds/$build_slug \
-                --header 'Accept: application/json' --header 'Authorization: $ACCESS_TOKEN'"
-            response=$(eval "${command}")
-        else
-            response=$(< ./testdata/"$1")
-        fi
-        [ "$DEBUG" == "true" ] && log "${command%%'--header'*}" "$response" "get_build_status.log"
+    if [ -z "${TESTING_ENABLED}" ]; then
+        local command="curl --silent -X GET -w \"status_code:%{http_code}\" https://api.bitrise.io/v0.1/apps/$PROJECT_SLUG/builds/$build_slug \
+            --header 'Accept: application/json' --header 'Authorization: $ACCESS_TOKEN'"
+        response=$(eval "${command}")
+    else
+        response=$(< ./testdata/"$1")
+    fi
+    [ "$DEBUG" == "true" ] && log "${command%%'--header'*}" "$response" "get_build_status.log"
 
-        if [[ "$response" != *"<!DOCTYPE html>"* ]]; then
-            handle_status_response "${response%'status_code'*}"
+    if [[ "$response" != *"<!DOCTYPE html>"* ]]; then
+        handle_status_response "${response%'status_code'*}"
+    else
+        if [[ $status_counter -lt $retry ]]; then
+            build_status=0
+            ((status_counter++))
         else
-            if [[ $status_counter -lt $retry ]]; then
-                build_status=0
-                ((status_counter++))
-            else
-                echo "ERROR: Invalid response received from Bitrise API"
-                build_status="null"
-            fi
+            echo "ERROR: Invalid response received from Bitrise API"
+            build_status="null" 
         fi
+    fi
 }
 
 function handle_status_response() {
@@ -296,7 +297,6 @@ function stream_logs() {
     current_log_chunks_positions=("${log_chunks_positions[@]}")
 }
 
-
 function get_build_logs() {
     local log_is_archived=false
     local counter=0
@@ -320,44 +320,11 @@ function get_build_logs() {
     done
     log_url=$(echo "$response" | jq ".expiring_raw_log_url" | sed 's/"//g')
     if ! "$log_is_archived" || [ -z "$log_url" ]; then
-        echo "LOGS WERE NOT AVAILABLE! - Trying again in 5 minutes"
-        sleep 300
-        if ! "$log_is_archived" || [ -z "$log_url" ]; then
-            echo "LOGS WERE NOT AVAILABLE - navigate to $build_url to see the logs."
-            exit ${exit_code}
-        fi
+        echo "LOGS WERE NOT AVAILABLE - navigate to $build_url to see the logs."
+        exit ${exit_code}
     else
         print_logs "$log_url"
     fi
-}
-
-
-download_artifacts() {
-  if [ "$DOWNLOAD_ARTIFACTS" = "true" ]; then
-    OUTPUT_DIR=${DOWNLOAD_DIR:-'./'}
-    # Ensure directory OUTPUT_DIR exist
-    mkdir -p "$OUTPUT_DIR"
-    echo -e "section_start:`date +%s`:Download_Artifacts[collapsed=true]\r\e[0KDownload Artifacts"
-    echo "Downloading artifacts to $OUTPUT_DIR"
-    # Get artifacts slug
-    local command="curl --silent -X GET https://api.bitrise.io/v0.1/apps/$PROJECT_SLUG/builds/$build_slug/artifacts \
-                  --header 'Accept: application/json' --header 'Authorization: $ACCESS_TOKEN'"
-    response=$(eval "$command")
-    artifacts_slug=$(echo "$response" | jq --raw-output '.data[] .slug')
-    for artifact_slug in $artifacts_slug; do
-      echo "Download artifact meta data $artifact_slug"
-
-      command="curl --silent -X GET https://api.bitrise.io/v0.1/apps/$PROJECT_SLUG/builds/$build_slug/artifacts/$artifact_slug \
-                    --header 'Accept: application/json' --header 'Authorization: $ACCESS_TOKEN'" 
-
-      response=$(eval "$command")
-      artifact_url=$(echo "$response" | jq --raw-output '.data.expiring_download_url')
-      artifact_name=$(echo "$response" | jq --raw-output '.data.title')
-      echo "Downloading $artifact_name from $artifact_url"
-      curl "$artifact_url" --output "$OUTPUT_DIR/$artifact_name"
-    done
-    echo -e "section_end:`date +%s`:Download_Artifacts\r\e[0K"
-  fi
 }
 
 function print_logs() {
@@ -406,7 +373,9 @@ function print_logs() {
 
     # Print errors if found
     echo "$logs" | perl -ne 'push @errors, $_ if /^❌/; END { print "\033[1m\033[31m\n\n\t\tPossible Errors Discovered:\033[0m\n\n", @errors if @errors }'
-    # echo "$logs" | perl -ne 'push @errors, $_ if /^❌/; END { print "\n\n\tPossible Errors Discovered:\n", @errors if @errors }'
+    
+    # Check for Fastlane session expiration
+    DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     echo "$logs" | grep -q "Unauthorized Access" && {
         echo -e "\033[1m\033[31m\n\n\t\tUnauthorized Access\!\n\tAsk a Prod Eng or Team Lead to renew the Fastlane AppStoreConnect Session.\n\t\t Trying to send webex message to them now. . .\033[0m\n\n"
         bash $DIR/WebExTeams_DM_Alert.sh "Fastlane Session Seems To Be Expired" "$CI_JOB_NAME - $CI_COMMIT_REF_NAME \n \n $CI_JOB_URL" | tee -a $DIR/webex_log.txt || true
@@ -421,11 +390,9 @@ function build_status_message() {
             ;;
         "1")
             echo "Build Successful 🎉"
-            printf "\n \n🚀  Bitrise Build URL: %s\n" "${build_url}"
             ;;
         "2")
             echo "Build Failed 🚨"
-            printf "\n \n🚀  Bitrise Build URL: %s\n" "${build_url}"
             ;;
         "3")
             echo "Build Aborted 💥"
@@ -437,6 +404,68 @@ function build_status_message() {
     esac
 }
 
+function get_build_artifacts() {
+    local build_artifacts_names=()
+    local artifact_slug=""
+    local response=""
+    if [ -z "${TESTING_ENABLED}" ]; then 
+        local command="curl --silent -X GET https://api.bitrise.io/v0.1/apps/$PROJECT_SLUG/builds/$build_slug/artifacts \
+                            --header 'Accept: application/json' --header 'Authorization: $ACCESS_TOKEN'"
+        response=$(eval "${command}") 
+    else
+        response=$(<./testdata/build_artifacts_response.json)
+    fi
+    
+    [ "$DEBUG" == "true" ] && log "${command%%'--header'*}" "$response" "get_all_artifacts.log"
+    
+    # Support "all" to download all artifacts
+    if [ "$BUILD_ARTIFACTS" == "all" ]; then
+        mapfile -t build_artifacts_slugs < <(echo "$response" | jq -r '.data[].slug')
+    else
+        IFS=',' read -r -a build_artifacts_names <<< "$BUILD_ARTIFACTS"
+
+        for name in "${build_artifacts_names[@]}"
+        do
+            artifact_slug=$(echo "$response" | jq --arg artifact_name "$name" '.data[] | select(.title | contains($artifact_name)) | .slug' | sed 's/"//g')
+            
+            [ -n "$artifact_slug" ] && build_artifacts_slugs+=("${artifact_slug}")
+        done
+    fi
+
+    if [[ ${#build_artifacts_slugs[@]} == 0 ]]; then
+        printf "%b" "\e[31m ERROR: Invalid download artifacts arguments(s). Make sure artifact names are correct and are passed in the format of --download-artifacts name1,name2 or --download-artifacts all \e[0m\n"
+        exit 1
+    fi
+}
+
+function download_single_artifact() {
+    local artifact_slug="$1"
+    local response=""
+    if [ -z "${TESTING_ENABLED}" ]; then 
+        local command="curl --silent -X GET https://api.bitrise.io/v0.1/apps/$PROJECT_SLUG/builds/$build_slug/artifacts/$artifact_slug \
+                            --header 'Accept: application/json' --header 'Authorization: $ACCESS_TOKEN'"
+        response=$(eval "${command}") 
+    else
+        response=$(<./testdata/single_artifact_response.json)
+    fi
+
+    [ "$DEBUG" == "true" ] && log "${command%%'--header'*}" "$response" "get_single_artifact.log"
+
+    artifact_url=$(echo "$response" | jq ".data.expiring_download_url" | sed 's/"//g')
+    artifact_title=$(echo "$response" | jq ".data.title" | sed 's/"//g')
+    printf "%b" "Downloading build artifact $artifact_title\n"
+    curl -X GET "$artifact_url" --output "./build_artifacts/$artifact_title"
+    exit_code=$(( exit_code + $? ))
+}
+
+function download_build_artifacts() {
+    get_build_artifacts  
+    for slug in "${build_artifacts_slugs[@]}"
+    do
+        download_single_artifact "$slug"
+    done
+}
+
 function log() {
     local request="$1"
     local response="$2"
@@ -446,16 +475,15 @@ function log() {
     printf "%b" "\n[$(TZ="EST6EDT" date +'%T')] REQUEST: ${secured_request}\n[$(TZ="EST6EDT" date +'%T')] RESPONSE: $response\n" >> ./gitrise_temp/"$log_file"
 }
 
-# No function execution when the script is sourced
+# No function execution when the script is sourced 
 # shellcheck disable=SC2119
 # disables "use foo "$@" if function's $1 should mean script's $1."
 if [ "$0" = "${BASH_SOURCE[0]}" ] && [ -z "${TESTING_ENABLED}" ]; then
     validate_input
     trigger_build
     process_build
-    [ -z "$STREAM" ] && get_build_logs
+    [ -z "$STREAM" ] && get_build_logs 
     build_status_message "$build_status"
-    download_artifacts
+    [ -n "$BUILD_ARTIFACTS" ] && download_build_artifacts
     exit ${exit_code}
 fi
-
