@@ -1,11 +1,44 @@
-# Gitrise 
-[![Version](https://img.shields.io/github/v/release/Tumiya/gitrise?label=Version)](https://github.com/Tumiya/gitrise/releases)
-[![Mainline Status](https://img.shields.io/github/actions/workflow/status/Tumiya/gitrise/ci-workflow.yml?label=Mainline%20Status)](https://github.com/Tumiya/gitrise/actions?query=branch%3Adevelop)
+# Gitrise (thomasng fork)
+
+[![Upstream Version](https://img.shields.io/github/v/release/Tumiya/gitrise?label=Upstream%20Version)](https://github.com/Tumiya/gitrise/releases)
 ![License](https://img.shields.io/github/license/Tumiya/gitrise?label=License)
 
 A Bitrise trigger in pure `bash`!
 
+**This is a fork of [Tumiya/gitrise](https://github.com/Tumiya/gitrise) with additional features for GitLab CI integration.**
+
 ![](docs/images/gitrise.png)
+
+## Fork Differences
+
+This fork adds the following features on top of the official Gitrise:
+
+### 1. GitLab Collapsible Sections
+Automatically formats Bitrise logs with GitLab's collapsible section syntax, making logs easier to navigate in GitLab CI. Each Bitrise workflow step becomes a collapsible section that can be expanded/collapsed.
+
+**How it works:**
+- Uses a multi-stage Perl regex pipeline to parse Bitrise log format
+- Extracts step numbers, names, and status (Success/Failed/Skipped)
+- Wraps each step in GitLab's `section_start`/`section_end` markers
+- Auto-collapses sections for cleaner log output
+- Preserves the Bitrise summary section at the end
+
+### 2. Enhanced Error Detection
+- **❌ Emoji Detection**: Automatically finds and highlights all lines starting with ❌ emoji at the end of logs
+- **Fastlane Session Expiration**: Detects "Unauthorized Access" errors and alerts team via Webex
+
+### 3. Webex Notifications
+Sends Webex messages when Fastlane authentication expires, notifying team leads to renew the session.
+
+### 4. Download All Artifacts
+Added `--download-artifacts all` option to download all build artifacts without specifying names individually.
+
+**Example:**
+```bash
+gitrise.sh -a token -s slug -w workflow -b branch --download-artifacts all
+```
+
+---
 
 ## Usage
 To use Gitrise, all you need is the `gitrise.sh` script. There are four arguments that you have to pass to the script for a successful run:  
@@ -15,7 +48,7 @@ To use Gitrise, all you need is the `gitrise.sh` script. There are four argument
  ``` 
 
 ### Git Checkout Config (commit, tag, branch)
-Gitrise supports all the Git Checkout configuraions supported by Bitrise including commit, tag, and branch. In the example above, these options are shown with `[-b branch|-t tag|-c commit]`. For building purposes, however, you should only pass one of these building options as Bitrise will only use one of them in this priority order: commit, tag, branch. Some of the common use cases are given below:
+Gitrise supports all the Git Checkout configurations supported by Bitrise including commit, tag, and branch. In the example above, these options are shown with `[-b branch|-t tag|-c commit]`. For building purposes, however, you should only pass one of these building options as Bitrise will only use one of them in this priority order: commit, tag, branch. Some of the common use cases are given below:
 
 Trigger a build for a specific branch:
 
@@ -56,6 +89,12 @@ To download build artifacts with Gitrise, use the `--download-artifacts` flag an
 gitrise.sh -a token -s project_slug -w workflow [-b branch|-t tag|-c commit] --download-artifacts myApp.ipa,.txt
 ``` 
 
+**Download all artifacts** (fork feature):
+
+```
+gitrise.sh -a token -s project_slug -w workflow [-b branch|-t tag|-c commit] --download-artifacts all
+```
+
 **Note**: The artifact names passed to Gitrise should either fully or partially match the names you see under your build's **Artifacts** tab on Bitrise. Moreover, you should pass a distinctive name for every artifact you're wishing to download. For example, if you only have one .log artifact, you can just pass `.log`, but if you have two .log artifacts and want to download both of them, you will need to pass two distinctive names such as `file1.log,file2.log`.
 
 ### Usage Guide
@@ -63,58 +102,38 @@ gitrise.sh -a token -s project_slug -w workflow [-b branch|-t tag|-c commit] --d
 The complete Gitrise usage guide can be found below:
 
 ```
-Usage: gitrise.sh [-d] [-e] [-h] [-T] [-v]  -a token -s project_slug -w workflow [-b branch|-t tag|-c commit] 
+Usage: gitrise.sh [-d] [-e] [-h] [-T] [-v]  -a token -s project_slug -w workflow [-b branch|-t tag|-c commit]
 
-<<<<<<< HEAD
-  -a, --access-token  <string>    Bitrise access token
-  -b, --branch        <string>    Git branch
-  -c, --commit        <string>    Git commit hash
-  -d, --debug                     Debug mode enabled
-  -D, --download      <string>    Download artifacts to specified directory" 
-  -e, --env           <string>    List of environment variables in the form of key1:value1,key2:value2
-  -h, --help                      Print this help text
-  -p, --poll           <string>   Polling interval (in seconds) to check the build status." 
-      --stream                    Stream the build logs"
-  -s, --slug          <string>    Bitrise project slug
-  -T, --test                      Test mode enabled
-  -t, --tag           <string>    Git tag
-  -v, --version                   App version
-  -w, --workflow      <string>    Bitrise workflow
-=======
-  -a, --access-token           <string>    Bitrise access token
-  -b, --branch                 <string>    Git branch
-  -c, --commit                 <string>    Git commit hash
-  -d, --debug                              Debug mode enabled
-      --download-artifacts     <string>    List of build artifact names to download in the form of name1,name2
-  -e, --env                    <string>    List of environment variables in the form of key1:value1,key2:value2
-  -h, --help                               Print this help text
-  -p, --poll                   <string>    Polling interval (in seconds) to check the build status." 
-      --stream                             Stream the build logs"
-  -s, --slug                   <string>    Bitrise project slug
-  -T, --test                               Test mode enabled
-  -t, --tag                    <string>    Git tag
-  -v, --version                            App version
-  -w, --workflow               <string>    Bitrise workflow
->>>>>>> official/release/0.9.1
+  -a, --access-token         <string>    Bitrise access token
+  -b, --branch               <string>    Git branch
+  -c, --commit               <string>    Git commit hash 
+  -d, --debug                            Debug mode enabled
+      --download-artifacts   <string>    List of build artifact names to download in the form of name1,name2 or 'all' to download all artifacts
+  -e, --env                  <string>    List of environment variables in the form of key1:value1,key2:value2
+  -h, --help                             Print this help text
+  -p, --poll                  <string>   Polling interval (in seconds) to get the build status.
+      --stream                           Stream build logs
+  -s, --slug                  <string>   Bitrise project slug
+  -T, --test                             Test mode enabled
+  -t, --tag                   <string>   Git tag
+  -v, --version                          App version
+  -w, --workflow              <string>   Bitrise workflow
 ```
 
 ## Contributing
 
-Bug reports and suggestions for improvement are always welcome! Pull requests are also accepted!
+This is a personal fork. For contributions to the main project, please visit [Tumiya/gitrise](https://github.com/Tumiya/gitrise).
 
-If you are interested in adding functionality through a pull request, please open a new issue so that we have the chance to discuss it first.
+For issues specific to this fork's features (GitLab sections, Webex notifications, etc.), please open an issue in this repository.
 
-Before opening a PR, please make sure you have gone through the following steps:
+## Upstream Sync
 
- * linted the scripts you have touched using [ShellCheck](https://github.com/koalaman/shellcheck)
- * added tests for your changes
+This fork is based on Gitrise v0.10.0. To sync with upstream:
 
-To run the unit tests, use the following command in the project directory
 ```bash
-./tests/test_runner
+git fetch official
+git merge official/develop
 ```
-
-After testing your changes, open a pull request to merge your branch into the **develop** branch.
 
 ## License
 This software is available as open source under the terms of the MIT License. A copy of this license is included in the file [LICENSE](https://github.com/Tumiya/gitrise/blob/develop/LICENSE).
