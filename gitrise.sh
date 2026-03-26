@@ -193,14 +193,15 @@ EOF
 function trigger_build() {
     local response=""
     if [ -z "${TESTING_ENABLED}" ]; then
-        local command="curl --silent -X POST https://api.bitrise.io/v0.1/apps/$PROJECT_SLUG/builds \
-                --data '$(generate_build_payload)' \
-                --header 'Accept: application/json' --header 'Authorization: $ACCESS_TOKEN'"
-        response=$(eval "${command}")
+        local payload
+        payload=$(generate_build_payload)
+        response=$(curl --silent -X POST "https://api.bitrise.io/v0.1/apps/$PROJECT_SLUG/builds" \
+                --data "$payload" \
+                --header 'Accept: application/json' --header "Authorization: $ACCESS_TOKEN")
     else
         response=$(<./testdata/"$1"_build_trigger_response.json)
     fi
-    [ "$DEBUG" == "true" ] && log "${command%'--data'*}" "$response" "trigger_build.log"
+    [ "$DEBUG" == "true" ] && log "POST https://api.bitrise.io/v0.1/apps/$PROJECT_SLUG/builds" "$response" "trigger_build.log"
 
     status=$(echo "$response" | jq ".status" | sed 's/"//g' )
     if [ "$status" != "ok" ]; then
