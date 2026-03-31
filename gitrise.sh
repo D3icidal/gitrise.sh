@@ -197,6 +197,7 @@ function trigger_build() {
         payload=$(generate_build_payload)
         response=$(curl --silent -X POST "https://api.bitrise.io/v0.1/apps/$PROJECT_SLUG/builds" \
                 --data "$payload" \
+                --header 'Content-Type: application/json' \
                 --header 'Accept: application/json' --header "Authorization: $ACCESS_TOKEN")
     else
         response=$(<./testdata/"$1"_build_trigger_response.json)
